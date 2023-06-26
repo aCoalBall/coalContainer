@@ -9,7 +9,6 @@ import (
 
 // go run coal main.go
 func main() {
-	fmt.Println(os.Args[1])
 	switch os.Args[1] {
 	case "run":
 		run()
@@ -26,10 +25,8 @@ func run() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID,
+		Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
 	}
-
-	//syscall.Chroot()
 	
 	must(cmd.Run())
 }
@@ -41,9 +38,14 @@ func child() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	//syscall.Chroot()
-	
+	must(syscall.Sethostname([]byte("container")))
+	must(syscall.Chroot("rootfs"))
+	must(os.Chdir("/"))
+	must(syscall.Mount("proc", "/proc", "proc", 0, ""))
+
 	must(cmd.Run())
+
+	must(syscall.Unmount("/proc", 0))
 }
 
 func must(err error) {
